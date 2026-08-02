@@ -8,8 +8,7 @@ public class ReadWrite {
 	
 	int scanInt() {
 		return sc.nextInt();
-	}
-	
+	}	
 	float scanFloat() {
 		return sc.nextFloat();
 	}
@@ -19,5 +18,9 @@ public class ReadWrite {
 	boolean scanBool() {
 		return sc.nextBoolean();
 	}
+	String scanString() {
+		return sc.nextLine();
+	}
+	
 		
 }
