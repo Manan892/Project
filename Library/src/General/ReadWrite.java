@@ -18,5 +18,9 @@ public class ReadWrite {
 	boolean scanBool() {
 		return sc.nextBoolean();
 	}
-
+	String scanString() {
+		return sc.nextLine();
+	}
+	
+		
 }
