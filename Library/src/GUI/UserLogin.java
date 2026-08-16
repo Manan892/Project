@@ -2,8 +2,15 @@ package GUI;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import javax.swing.*;
+
+import General.PasswordKey;
+import General.ReadWrite;
 
 public class UserLogin implements ActionListener {
 
@@ -12,6 +19,8 @@ public class UserLogin implements ActionListener {
 	JTextField getIDLogin, getIDSignUp, getIDAdmin, confirmPassword, getInfo, enterInfo, enterID, newConfirmPassword;
 	JPasswordField getPasswordLogin, getPasswordSignUp, getPasswordAdmin, newPassword;
 	JButton submitLogin, submitSignUp, submitAdmin, forgetPassword, signUp, forgetPasswordSubmit;
+	
+	BackgroundWork bgw = new BackgroundWork();
 	
 	void loginPage() {
 		
@@ -39,7 +48,7 @@ public class UserLogin implements ActionListener {
 		JPanel pane2 = new JPanel();
 		
 		getPasswordLogin = new JPasswordField(20);
-		
+		getPasswordLogin.addActionListener(this);
 		pane2.add(new JLabel("Password: "));
 		pane2.add(getPasswordLogin);
 		char defaultEcho = getPasswordLogin.getEchoChar();
@@ -59,6 +68,7 @@ public class UserLogin implements ActionListener {
 		
 		JPanel pane3 = new JPanel();
 		submitLogin = new JButton("Submit");
+		submitLogin.addActionListener(this);
 		pane3.add(submitLogin);
 		mainPanel.add(pane3);
 		
@@ -138,6 +148,7 @@ public class UserLogin implements ActionListener {
 		
 		JPanel pane5 = new JPanel();
 		submitSignUp = new JButton("Submit");
+		submitSignUp.addActionListener(this);
 		pane5.add(submitSignUp);
 		mainPanel.add(pane5);
 		
@@ -192,6 +203,7 @@ public class UserLogin implements ActionListener {
 		
 		JPanel pane5 = new JPanel();
 		forgetPasswordSubmit = new JButton("Submit");
+		forgetPasswordSubmit.addActionListener(this);
 		pane5.add(forgetPasswordSubmit);
 		mainPanel.add(pane5);
 		
@@ -199,7 +211,6 @@ public class UserLogin implements ActionListener {
 		forgetPasswordFrame.setVisible(true);
 	}
 	
-	@Override
 	public void actionPerformed(ActionEvent e) {
 		
 		if(e.getSource() == signUp) {
@@ -211,10 +222,171 @@ public class UserLogin implements ActionListener {
 			loginFrame.dispose();
 			forgetPassword();
 		}
+	
+		if(e.getSource() == submitLogin) {
+			
+			String getPasswordQuery = "SELECT pass FROM login WHERE id = ?";
+			
+			try(Connection con = ReadWrite.connect(); 
+				PreparedStatement ps = con.prepareStatement(getPasswordQuery)) {
+				
+				ps.setString(1, getIDLogin.getText());
+				ResultSet rs = ps.executeQuery();
+				
+				if(rs.next()) {
+					
+					char[] passArr = getPasswordLogin.getPassword();
+					String passStr = new String(passArr);
+					java.util.Arrays.fill(passArr, '0');
+					
+					if(PasswordKey.decryption(rs.getString("pass")).equals(passStr)) {
+						
+						// GO TO MAIN PAGE
+						
+					} 	else {
+							JOptionPane.showMessageDialog(loginFrame, "Incorrect Password", "Wrong Information", JOptionPane.ERROR_MESSAGE);
+					}
+					
+				} 	else {
+					JOptionPane.showMessageDialog(loginFrame, "Non Exsisting User ID", "Wrong Information", JOptionPane.ERROR_MESSAGE);
+					}
+				
+			} catch(SQLException ex) {
+				ex.printStackTrace();
+			}
+ 		}
 		
+		if(e.getSource() == submitSignUp) {
+			
+			if(getIDSignUp.getText().equals("")) {
+				JOptionPane.showMessageDialog(signUpFrame , "Enter ID information", "Missing Information", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			
+			else if(bgw.duplicateID(getIDSignUp.getText())) {
+				JOptionPane.showMessageDialog(signUpFrame , "The ID already exist", "Repeating Information", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			else if(getPasswordSignUp.getPassword().length<8) {
+				JOptionPane.showMessageDialog(signUpFrame , "Too small Password", "Not secure Enough", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			else if(getInfo.getText().length()!=6) {
+				JOptionPane.showMessageDialog(signUpFrame , "Enter PIN as per Instructions", "Wrong Information", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			
+			char[] passwordArr = getPasswordSignUp.getPassword();
+			String passwordStr = new String(passwordArr);
+			java.util.Arrays.fill(passwordArr, '0');	
+			
+			if(passwordStr.equals(confirmPassword.getText())) {
+				
+				String newUserQuery = "INSERT INTO login(id, pass, pin) VALUES (?, ?, ?)";
+					
+				try(Connection con = ReadWrite.connect(); 
+					PreparedStatement signUpStatement = con.prepareStatement(newUserQuery)) {
+					
+					signUpStatement.setString(1, getIDSignUp.getText());
+					signUpStatement.setString(2, PasswordKey.encryption(confirmPassword.getText()));
+					signUpStatement.setString(3, getInfo.getText());
+					
+					int rows = signUpStatement.executeUpdate();
+					
+					if(rows>0) {
+						JOptionPane.showMessageDialog(null, "User Sign-UP Succesful");
+						
+						// GO TO MAIN PAGE
+					} else {
+						JOptionPane.showMessageDialog(null, "User Sign-UP Failed");
+					}
+					
+				}catch(SQLException ex) {
+					ex.printStackTrace();
+					JOptionPane.showMessageDialog(null, "User Sign-UP Failed");
+				}
+				
+			}else {
+				JOptionPane.showMessageDialog(null, "Password and Confim Password does not match");
+				return;
+			}
+			
+		}
+		
+		if(e.getSource() == forgetPasswordSubmit) {
+			
+			if(enterID.getText().isEmpty()) {
+				JOptionPane.showMessageDialog(forgetPasswordFrame, "Provide your ID", "Information Not Given", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			
+			else if(!bgw.duplicateID(enterID.getText())) {
+				JOptionPane.showMessageDialog(forgetPasswordFrame, "ID does not exist", "Wrong Information", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			else if(enterInfo.getText().length()!=6) {
+				JOptionPane.showMessageDialog(forgetPasswordFrame, "THe PIN doesn't match required condition", "Insufficient Information", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			else if(newPassword.getPassword().length<8) {
+				JOptionPane.showMessageDialog(forgetPasswordFrame, "Password must be atleast 8 characters long", "Weak Password", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			
+			char[] newPassArr = newPassword.getPassword();
+			String newPassStr = new String(newPassArr);
+			java.util.Arrays.fill(newPassArr, '0');
+				
+			if(newPassStr.equals(newConfirmPassword.getText())) {
+					
+				String newPasswordQuery = "UPDATE login SET pass = ? WHERE id = ? AND pin = ?"; 
+					
+				try(Connection con = ReadWrite.connect();
+						PreparedStatement setNewPass = con.prepareStatement(newPasswordQuery)) {
+						
+					setNewPass.setString(1, newPassStr);
+					setNewPass.setString(2, enterID.getText());
+					setNewPass.setString(3, enterInfo.getText());
+						
+					int rows = setNewPass.executeUpdate();
+						
+					if(rows>0) {
+						JOptionPane.showMessageDialog(forgetPasswordFrame, "Password changed Succesfully", "Update Succesful", JOptionPane.INFORMATION_MESSAGE);
+						forgetPasswordFrame.dispose();
+						loginPage();
+					}else {
+						JOptionPane.showMessageDialog(forgetPasswordFrame, "Password change unsuccessful", "Update Failure", JOptionPane.INFORMATION_MESSAGE);
+					}
+								
+				}catch(SQLException ex) {
+						ex.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Forget Password Failed");	
+				}
+			}else {
+					JOptionPane.showMessageDialog(forgetPasswordFrame, "Password and Confirm Password does not match", "Wrong Information", JOptionPane.WARNING_MESSAGE);
+			}
+		}
+	}	
+}
+
+class BackgroundWork {
+	
+	boolean duplicateID(String id) {
+		
+		String checkIDQuery = "SELECT * FROM login where id = ?";
+		
+		try(Connection con = ReadWrite.connect();
+			PreparedStatement checkDuplicity = con.prepareStatement(checkIDQuery)) {
+
+			checkDuplicity.setString(1, id);
+			ResultSet checkID = checkDuplicity.executeQuery();
+			return checkID.next();
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
-	
-	
 	
 }
 

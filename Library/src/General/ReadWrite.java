@@ -26,11 +26,11 @@ public class ReadWrite {
 		return sc.nextLine();
 	}
 	
-	private final String url = "jdbc:mysql://localhost:3306/library";
-	private final String user = "root";
-	private final String password = "";
+	private final static String url = "jdbc:mysql://localhost:3306/library";
+	private final static String user = "root";
+	private final static String password = "";
 	
-	public Connection connect() throws SQLException{
+	public static Connection connect() throws SQLException{
 		return  DriverManager.getConnection(url, user, password);
 	}
 		
