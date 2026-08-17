@@ -332,6 +332,10 @@ public class UserLogin implements ActionListener {
 				JOptionPane.showMessageDialog(forgetPasswordFrame, "Password must be atleast 8 characters long", "Weak Password", JOptionPane.WARNING_MESSAGE);
 				return;
 			}
+			else if(newConfirmPassword.getText().isEmpty()) {
+				JOptionPane.showMessageDialog(forgetPasswordFrame, "Confirm Password Field can't be empty", "No data Provided", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
 			
 			char[] newPassArr = newPassword.getPassword();
 			String newPassStr = new String(newPassArr);
